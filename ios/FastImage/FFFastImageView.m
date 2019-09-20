@@ -63,8 +63,17 @@
 - (void)setImageColor:(UIColor *)imageColor {
     if (imageColor != nil) {
         _imageColor = imageColor;
-        super.image = [self makeImage:super.image withTint:self.imageColor];
+        if (super.image) {
+            super.image = [self makeImage:super.image withTint:self.imageColor];
+        }
     }
+}
+
+- (void)setDefaultSource:(UIImage *)defaultSource {
+   if (_defaultSource != defaultSource) {
+       _defaultSource = defaultSource;
+       _needsReload = YES;
+   }
 }
 
 - (UIImage*)makeImage:(UIImage *)image withTint:(UIColor *)color {
@@ -107,6 +116,9 @@
     if (_needsReload) {
         [self reloadImage];
     }
+    else if (_defaultSource) {
+        [self setImage:_defaultSource];
+    }
 }
 
 - (void)reloadImage
@@ -134,18 +146,18 @@
             }
             self.hasCompleted = YES;
             [self sendOnLoad:image];
-            
+
             if (self.onFastImageLoadEnd) {
                 self.onFastImageLoadEnd(@{});
             }
             return;
         }
-        
+
         // Set headers.
         [_source.headers enumerateKeysAndObjectsUsingBlock:^(NSString *key, NSString* header, BOOL *stop) {
             [[SDWebImageDownloader sharedDownloader] setValue:header forHTTPHeaderField:key];
         }];
-        
+
         // Set priority.
         SDWebImageOptions options = SDWebImageRetryFailed;
         switch (_source.priority) {
@@ -159,7 +171,7 @@
                 options |= SDWebImageHighPriority;
                 break;
         }
-        
+
         switch (_source.cacheControl) {
             case FFFCacheControlWeb:
                 options |= SDWebImageRefreshCached;
@@ -170,7 +182,7 @@
             case FFFCacheControlImmutable:
                 break;
         }
-        
+
         if (self.onFastImageLoadStart) {
             self.onFastImageLoadStart(@{});
             self.hasSentOnLoadStart = YES;
@@ -179,7 +191,7 @@
         }
         self.hasCompleted = NO;
         self.hasErrored = NO;
-        
+
         [self downloadImage:_source options:options];
     }
 }
@@ -187,7 +199,7 @@
 - (void)downloadImage:(FFFastImageSource *) source options:(SDWebImageOptions) options {
     __weak typeof(self) weakSelf = self; // Always use a weak reference to self in blocks
     [self sd_setImageWithURL:_source.url
-            placeholderImage:nil
+            placeholderImage:_defaultSource
                      options:options
                     progress:^(NSInteger receivedSize, NSInteger expectedSize, NSURL * _Nullable targetURL) {
                         if (weakSelf.onFastImageProgress) {
@@ -219,4 +231,3 @@
 }
 
 @end
-

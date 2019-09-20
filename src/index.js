@@ -7,12 +7,16 @@ import {
     requireNativeComponent,
     ViewPropTypes,
     StyleSheet,
+    Platform
 } from 'react-native'
+
+const isAndroid = Platform.OS === 'android'
 
 const FastImageViewNativeModule = NativeModules.FastImageView
 
 function FastImageBase({
     source,
+    defaultSource,
     tintColor,
     onLoadStart,
     onProgress,
@@ -26,6 +30,23 @@ function FastImageBase({
     ...props
 }) {
     const resolvedSource = Image.resolveAssetSource(source)
+    let resolvedDefaultSource = defaultSource
+
+    if (isAndroid) {
+        // Android receives a URI string, and resolves into a Drawable using RN's methods
+        resolvedDefaultSource = Image.resolveAssetSource(defaultSource)
+
+        if (resolvedDefaultSource)
+            resolvedDefaultSource = resolvedDefaultSource.uri
+        else resolvedDefaultSource = null
+    } else if (typeof resolvedDefaultSource !== 'number') {
+        // In iOS the number is passed, and bridged automatically into an UIImage
+        resolvedDefaultSource = null
+    }
+
+    if ((tintColor === null || tintColor === undefined) && style) {
+        tintColor = StyleSheet.flatten(style).tintColor
+    }
 
     if (fallback) {
         return (
@@ -35,6 +56,7 @@ function FastImageBase({
                     tintColor={tintColor}
                     style={StyleSheet.absoluteFill}
                     source={resolvedSource}
+                    defaultSource={resolvedDefaultSource}
                     onLoadStart={onLoadStart}
                     onProgress={onProgress}
                     onLoad={onLoad}
